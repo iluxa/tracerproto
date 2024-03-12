@@ -52,7 +52,7 @@ func (pf *EBPF) SetEBPF(cbpfProgram string) error {
 	return nil
 }
 
-func (pf *EBPF) Close(fd int32) error {
+func (pf *EBPF) Close() error {
 	if pf.filterProgram != nil {
 		return pf.filterProgram.Close()
 	}
