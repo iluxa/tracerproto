@@ -1,10 +1,8 @@
 module github.com/iluxa/tracerproto
 
-go 1.21.0
+go 1.19
 
-toolchain go1.21.1
-
-require github.com/cilium/ebpf v0.13.2
+require github.com/cilium/ebpf v0.12.3
 
 require (
 	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2 // indirect
