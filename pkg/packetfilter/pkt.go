@@ -4,12 +4,11 @@ import (
 	"github.com/cilium/ebpf"
 	"os"
 	"path"
-	"syscall"
 )
 
-func GetProgramFilterPath() (p string, err error) {
-	const bpfDir = "/sys/fs/bpf/kubeshark"
+const bpfDir = "/sys/fs/bpf/kubeshark"
 
+func GetProgramFilterPath() (p string, err error) {
 	if err = os.MkdirAll(bpfDir, 0644); err != nil {
 		return
 	}
@@ -17,21 +16,45 @@ func GetProgramFilterPath() (p string, err error) {
 	return
 }
 
-func OpenFilter() (int32, error) {
+func GeBPFProgArrayPath() (p string, err error) {
+	if err = os.MkdirAll(bpfDir, 0644); err != nil {
+		return
+	}
+	p = path.Join(bpfDir, "bpf_progs")
+	return
+}
+
+type EBPF struct {
+	filterProgram *ebpf.Program
+	bpfProgArray  *ebpf.Map
+}
+
+func NewEBPF() (*EBPF, error) {
 	p, err := GetProgramFilterPath()
 	if err != nil {
-		return -1, err
+		return nil, err
 	}
 	program, err := ebpf.LoadPinnedProgram(p, nil)
 	if err != nil {
-		return -1, err
+		return nil, err
 	}
-	return int32(program.FD()), nil
+	return &EBPF{
+		filterProgram: program,
+	}, nil
 }
 
-func CloseFilter(fd int32) error {
-	if fd != -1 {
-		syscall.Close(int(fd))
+func (pf *EBPF) GetFilterProgramFD() int32 {
+	return int32(pf.filterProgram.FD())
+}
+
+func (pf *EBPF) SetEBPF(cbpfProgram string) error {
+	// TODO
+	return nil
+}
+
+func (pf *EBPF) Close(fd int32) error {
+	if pf.filterProgram != nil {
+		return pf.filterProgram.Close()
 	}
 	return nil
 }
