@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"time"
 
 	"github.com/cilium/ebpf"
 )
@@ -36,9 +37,17 @@ func NewEBPF() (*EBPF, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get program failed: %v", err)
 	}
-	program, err := ebpf.LoadPinnedProgram(p, nil)
-	if err != nil {
-		return nil, fmt.Errorf("load pinned program failed: %v", err)
+	var program *ebpf.Program
+	for {
+		program, err = ebpf.LoadPinnedProgram(p, nil)
+		if err != nil {
+			if os.IsNotExist(err) {
+				time.Sleep(100 * time.Millisecond)
+			}
+			return nil, fmt.Errorf("load pinned program failed: %v", err)
+		} else {
+			break
+		}
 	}
 	return &EBPF{
 		filterProgram: program,
