@@ -12,7 +12,7 @@ func GetProgramFilterPath() (p string, err error) {
 	if err = os.MkdirAll(bpfDir, 0644); err != nil {
 		return
 	}
-	p = path.Join(bpfDir, "packets_buffer")
+	p = path.Join(bpfDir, "packet_filter")
 	return
 }
 
