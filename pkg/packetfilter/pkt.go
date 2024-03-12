@@ -9,7 +9,7 @@ import (
 const bpfDir = "/sys/fs/bpf/kubeshark"
 
 func GetProgramFilterPath() (p string, err error) {
-	if err = os.MkdirAll(bpfDir, 0644); err != nil {
+	if err = os.MkdirAll(bpfDir, 0666); err != nil {
 		return
 	}
 	p = path.Join(bpfDir, "packet_filter")
