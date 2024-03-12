@@ -1,9 +1,11 @@
 package packetfilter
 
 import (
-	"github.com/cilium/ebpf"
+	"fmt"
 	"os"
 	"path"
+
+	"github.com/cilium/ebpf"
 )
 
 const bpfDir = "/sys/fs/bpf/kubeshark"
@@ -32,11 +34,11 @@ type EBPF struct {
 func NewEBPF() (*EBPF, error) {
 	p, err := GetProgramFilterPath()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get program failed: %v", err)
 	}
 	program, err := ebpf.LoadPinnedProgram(p, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("load pinned program failed: %v", err)
 	}
 	return &EBPF{
 		filterProgram: program,
