@@ -12,7 +12,7 @@ import (
 const bpfDir = "/sys/fs/bpf/kubeshark"
 
 func GetProgramFilterPath() (p string, err error) {
-	if err = os.MkdirAll(bpfDir, 0666); err != nil {
+	if err = os.MkdirAll(bpfDir, 0755); err != nil {
 		return
 	}
 	p = path.Join(bpfDir, "packet_filter")
@@ -23,7 +23,7 @@ func GeBPFProgArrayPath() (p string, err error) {
 	if err = os.MkdirAll(bpfDir, 0644); err != nil {
 		return
 	}
-	p = path.Join(bpfDir, "bpf_progs")
+	p = path.Join(bpfDir, "pf_progs")
 	return
 }
 
@@ -43,6 +43,7 @@ func NewEBPF() (*EBPF, error) {
 		if err != nil {
 			if os.IsNotExist(err) {
 				time.Sleep(100 * time.Millisecond)
+				continue
 			}
 			return nil, fmt.Errorf("load pinned program failed: %v", err)
 		} else {
