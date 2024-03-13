@@ -41,11 +41,9 @@ func NewEBPF() (*EBPF, error) {
 	for {
 		program, err = ebpf.LoadPinnedProgram(p, nil)
 		if err != nil {
-			if os.IsNotExist(err) {
-				time.Sleep(100 * time.Millisecond)
-				continue
-			}
-			return nil, fmt.Errorf("load pinned program failed: %v", err)
+			time.Sleep(100 * time.Millisecond)
+			continue
+			//return nil, fmt.Errorf("load pinned program failed: %v", err)
 		} else {
 			break
 		}
