@@ -1,70 +1,99 @@
 package packetfilter
 
 import (
-	"fmt"
-	"os"
-	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/cilium/ebpf"
+	"github.com/fsnotify/fsnotify"
+	"github.com/rs/zerolog/log"
 )
 
-const bpfDir = "/sys/fs/bpf/kubeshark"
-
-func GetProgramFilterPath() (p string, err error) {
-	if err = os.MkdirAll(bpfDir, 0755); err != nil {
-		return
-	}
-	p = path.Join(bpfDir, "packet_filter")
-	return
-}
-
-func GeBPFProgArrayPath() (p string, err error) {
-	if err = os.MkdirAll(bpfDir, 0644); err != nil {
-		return
-	}
-	p = path.Join(bpfDir, "pf_progs")
-	return
-}
+const filterProgramPath = "/sys/fs/bpf/kubeshark/packet_filter"
 
 type EBPF struct {
-	filterProgram *ebpf.Program
-	bpfProgArray  *ebpf.Map
+	attachBpfFunc  func(int32) error
+	programWatcher *fsnotify.Watcher
 }
 
-func NewEBPF() (*EBPF, error) {
-	p, err := GetProgramFilterPath()
-	if err != nil {
-		return nil, fmt.Errorf("get program failed: %v", err)
+func NewEBPF(attachBpfFunc func(int32) error) (*EBPF, error) {
+	e := EBPF{
+		attachBpfFunc: attachBpfFunc,
 	}
-	var program *ebpf.Program
+	var err error
+	if err = e.watchProgramChange(); err != nil {
+		return nil, err
+	}
 	for {
-		program, err = ebpf.LoadPinnedProgram(p, nil)
+		err = e.attachEbpfProgram()
 		if err != nil {
+			log.Error().Err(err).Msg("Attach program error:")
 			time.Sleep(100 * time.Millisecond)
 			continue
-			//return nil, fmt.Errorf("load pinned program failed: %v", err)
 		} else {
 			break
 		}
 	}
-	return &EBPF{
-		filterProgram: program,
-	}, nil
+
+	return &e, err
 }
 
-func (pf *EBPF) GetFilterProgramFD() int32 {
-	return int32(pf.filterProgram.FD())
+func (e *EBPF) attachEbpfProgram() error {
+	program, err := ebpf.LoadPinnedProgram(filterProgramPath, nil)
+	if err != nil {
+		return err
+	}
+	err = e.attachBpfFunc(int32(program.FD()))
+	if err != nil {
+		log.Info().Msg("Filter progrma is attached")
+	}
+	return err
 }
 
-func (pf *EBPF) SetEBPF(cbpfProgram string) error {
-	// TODO
-	return nil
+func (e *EBPF) watchProgramChange() (err error) {
+	e.programWatcher, err = fsnotify.NewWatcher()
+	if err != nil {
+		log.Error().Err(err).Msg("Error create fsnotify watcher:")
+		return
+	}
+
+	path := filepath.Dir(filterProgramPath)
+	log.Info().Str("directory", path).Msg("Watching")
+	err = e.programWatcher.Add(path)
+	if err != nil {
+		return
+	}
+
+	go func() {
+		for {
+			select {
+			case event, ok := <-e.programWatcher.Events:
+				if !ok {
+					return
+				}
+				if event.Has(fsnotify.Create) {
+					if event.Name == filterProgramPath {
+						err = e.attachEbpfProgram()
+						if err != nil {
+							log.Error().Err(err).Msg("Attach eBPF program failed:")
+						}
+					}
+				}
+			case err, ok := <-e.programWatcher.Errors:
+				if !ok {
+					return
+				}
+				log.Error().Err(err).Msg("watcher error:")
+			}
+		}
+	}()
+
+	return
 }
 
-func (pf *EBPF) Close() error {
-	if pf.filterProgram != nil {
-		return pf.filterProgram.Close()
+func (e *EBPF) Close() error {
+	if e.programWatcher != nil {
+		return e.programWatcher.Close()
 	}
 	return nil
 }
