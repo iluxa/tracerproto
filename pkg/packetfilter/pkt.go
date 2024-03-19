@@ -9,7 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const filterProgramPath = "/sys/fs/bpf/kubeshark/packet_filter"
+const FilterProgramPath = "/sys/fs/bpf/kubeshark/packet_filter"
 
 type EBPF struct {
 	attachBpfFunc  func(int32) error
@@ -39,7 +39,7 @@ func NewEBPF(attachBpfFunc func(int32) error) (*EBPF, error) {
 }
 
 func (e *EBPF) attachEbpfProgram() error {
-	program, err := ebpf.LoadPinnedProgram(filterProgramPath, nil)
+	program, err := ebpf.LoadPinnedProgram(FilterProgramPath, nil)
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func (e *EBPF) watchProgramChange() (err error) {
 		return
 	}
 
-	path := filepath.Dir(filterProgramPath)
+	path := filepath.Dir(FilterProgramPath)
 	log.Info().Str("directory", path).Msg("Watching")
 	err = e.programWatcher.Add(path)
 	if err != nil {
@@ -72,7 +72,7 @@ func (e *EBPF) watchProgramChange() (err error) {
 					return
 				}
 				if event.Has(fsnotify.Create) {
-					if event.Name == filterProgramPath {
+					if event.Name == FilterProgramPath {
 						err = e.attachEbpfProgram()
 						if err != nil {
 							log.Error().Err(err).Msg("Attach eBPF program failed:")
