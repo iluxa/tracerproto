@@ -9,6 +9,7 @@ const PacketHeaderSize = int(unsafe.Sizeof(PacketUnixSocketHeader{}))
 type PacketUnixSocketHeader struct {
 	PacketCounter uint64
 	Timestamp     uint64
+	CgroupID      uint64
 }
 
 type PacketUnixSocket []byte
